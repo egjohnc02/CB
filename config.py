@@ -1,0 +1,4 @@
+import os
+
+TOKEN = os.getenv("DISCORD_TOKEN", "MTU0MDg4MjUyMDUzNzU2NzMyNQ.GIxkUv.4vzTH3RGF8nZt9M0rYgehvn5J24mszCJ4eP7Ss")
+GUILD_ID = int(os.getenv("GUILD_ID", 1540883913914978306))
