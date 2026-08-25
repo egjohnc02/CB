@@ -1,7 +1,7 @@
 import discord
 from datetime import datetime
 
-from ticket_manager import tickets, find_ticket_id, save_ticket
+from ticket_manager import tickets, find_ticket_id, save_ticket, undo_ticket_step
 from templates import (
     GREETING_TEMPLATE,
     MANDARIN_GREETING_TEMPLATE,
@@ -338,7 +338,44 @@ class ExcludedDoneModal(discord.ui.Modal):
         await interaction.response.send_message(
             content=f"📋 **{title_text} — #{self.ticket_id}**\n\n```text\n{text}\n```",
             embed=build_embed(self.ticket_id),
-            view=DoneCommentPostedView(self.ticket_id),
+            view=DoneCommentPostedView(self.ticket_id, origin="done"),
+            ephemeral=True
+        )
+
+
+class DoneOtherModal(discord.ui.Modal):
+
+    def __init__(self, ticket_id):
+        super().__init__(title="Custom Done Comment")
+        self.ticket_id = find_ticket_id(ticket_id)
+
+        self.comment_type = discord.ui.TextInput(
+            label="Resolution Name / Type",
+            placeholder="Example: Done - Custom / Done with notes",
+            default="Custom Done",
+            required=True
+        )
+        self.comment_body = discord.ui.TextInput(
+            label="Done Comment Text",
+            placeholder="Enter full comment to post...",
+            style=discord.TextStyle.paragraph,
+            required=True
+        )
+
+        self.add_item(self.comment_type)
+        self.add_item(self.comment_body)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        ticket = tickets[self.ticket_id]
+        ticket["ticket_type"] = "do"
+        ticket["done_comment_type"] = self.comment_type.value.strip() or "Custom Done"
+
+        text = self.comment_body.value.strip()
+
+        await interaction.response.send_message(
+            content=f"📋 **{ticket['done_comment_type']} — #{self.ticket_id}**\n\n```text\n{text}\n```",
+            embed=build_embed(self.ticket_id),
+            view=DoneCommentPostedView(self.ticket_id, origin="done"),
             ephemeral=True
         )
 
@@ -372,7 +409,7 @@ class DuplicateModal(discord.ui.Modal):
         await interaction.response.send_message(
             content=f"📋 **Cancel - Duplicate — #{self.ticket_id}**\n\n```text\n{text}\n```",
             embed=build_embed(self.ticket_id),
-            view=DoneCommentPostedView(self.ticket_id),
+            view=DoneCommentPostedView(self.ticket_id, origin="cancel"),
             ephemeral=True
         )
 
@@ -425,7 +462,7 @@ class RerouteModal(discord.ui.Modal):
         await interaction.response.send_message(
             content=f"📋 **Cancel - Reroute — #{self.ticket_id}**\n\n```text\n{text}\n```",
             embed=build_embed(self.ticket_id),
-            view=DoneCommentPostedView(self.ticket_id),
+            view=DoneCommentPostedView(self.ticket_id, origin="cancel"),
             ephemeral=True
         )
 
@@ -472,7 +509,7 @@ class CancelAlreadyInTargetModal(discord.ui.Modal):
         await interaction.response.send_message(
             content=f"📋 **Cancel - Already in Target Brand/Collection — #{self.ticket_id}**\n*(📸 Lưu ý: Nhớ gửi kèm ảnh chụp màn hình minh chứng)*\n\n```text\n{text}\n```",
             embed=build_embed(self.ticket_id),
-            view=DoneCommentPostedView(self.ticket_id),
+            view=DoneCommentPostedView(self.ticket_id, origin="cancel"),
             ephemeral=True
         )
 
@@ -503,7 +540,46 @@ class CancelMultiSourceSkuModal(discord.ui.Modal):
         await interaction.response.send_message(
             content=f"📋 **Cancel - Excluded from UnWL (Multi-Source) — #{self.ticket_id}**\n\n```text\n{text}\n```",
             embed=build_embed(self.ticket_id),
-            view=DoneCommentPostedView(self.ticket_id),
+            view=DoneCommentPostedView(self.ticket_id, origin="cancel"),
+            ephemeral=True
+        )
+
+
+class CancelOtherModal(discord.ui.Modal):
+
+    def __init__(self, ticket_id):
+        super().__init__(title="Cancel - Other Reason")
+        self.ticket_id = find_ticket_id(ticket_id)
+
+        self.reason_name = discord.ui.TextInput(
+            label="Reason Title / Summary",
+            placeholder="Example: Cancel - Supplier Request / Invalid SKU",
+            default="Cancel - Other",
+            required=True
+        )
+        self.comment_body = discord.ui.TextInput(
+            label="Cancel Comment Text",
+            placeholder="Enter full comment to post...",
+            style=discord.TextStyle.paragraph,
+            required=True
+        )
+
+        self.add_item(self.reason_name)
+        self.add_item(self.comment_body)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        ticket = tickets[self.ticket_id]
+        r_name = self.reason_name.value.strip() or "Cancel - Other"
+        ticket["ticket_type"] = "cancel"
+        ticket["status"] = "cancelled"
+        ticket["done_comment_type"] = r_name
+
+        text = self.comment_body.value.strip()
+
+        await interaction.response.send_message(
+            content=f"📋 **{r_name} — #{self.ticket_id}**\n\n```text\n{text}\n```",
+            embed=build_embed(self.ticket_id),
+            view=DoneCommentPostedView(self.ticket_id, origin="cancel"),
             ephemeral=True
         )
 
@@ -548,7 +624,7 @@ class OnHoldUnlocatedSkuModal(discord.ui.Modal):
         await interaction.response.send_message(
             content=f"📋 **On Hold - Không tìm thấy SKU — #{self.ticket_id}**\n\n```text\n{text}\n```",
             embed=build_embed(self.ticket_id),
-            view=DoneCommentPostedView(self.ticket_id),
+            view=DoneCommentPostedView(self.ticket_id, origin="on_hold"),
             ephemeral=True
         )
 
@@ -578,7 +654,7 @@ class EngineeringBugModal(discord.ui.Modal):
         await interaction.response.send_message(
             content=f"📋 **On Hold - Engineering Bug — #{self.ticket_id}**\n\n```text\n{text}\n```",
             embed=build_embed(self.ticket_id),
-            view=DoneCommentPostedView(self.ticket_id),
+            view=DoneCommentPostedView(self.ticket_id, origin="on_hold"),
             ephemeral=True
         )
 
@@ -635,7 +711,46 @@ class VaultOnHoldModal(discord.ui.Modal):
         await interaction.response.send_message(
             content=f"📋 **Vault: {self.vault_title} — #{self.ticket_id}**\n\n```text\n{text}\n```",
             embed=build_embed(self.ticket_id),
-            view=DoneCommentPostedView(self.ticket_id),
+            view=DoneCommentPostedView(self.ticket_id, origin="on_hold"),
+            ephemeral=True
+        )
+
+
+class OnHoldOtherModal(discord.ui.Modal):
+
+    def __init__(self, ticket_id):
+        super().__init__(title="On Hold - Other Reason")
+        self.ticket_id = find_ticket_id(ticket_id)
+
+        self.reason_name = discord.ui.TextInput(
+            label="Reason Title / Summary",
+            placeholder="Example: On Hold - Waiting for Merchant Review",
+            default="On Hold - Other",
+            required=True
+        )
+        self.comment_body = discord.ui.TextInput(
+            label="On Hold Comment Text",
+            placeholder="Enter full comment to post...",
+            style=discord.TextStyle.paragraph,
+            required=True
+        )
+
+        self.add_item(self.reason_name)
+        self.add_item(self.comment_body)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        ticket = tickets[self.ticket_id]
+        r_name = self.reason_name.value.strip() or "On Hold - Other"
+        ticket["ticket_type"] = "on_hold"
+        ticket["status"] = "on_hold"
+        ticket["done_comment_type"] = r_name
+
+        text = self.comment_body.value.strip()
+
+        await interaction.response.send_message(
+            content=f"📋 **{r_name} — #{self.ticket_id}**\n\n```text\n{text}\n```",
+            embed=build_embed(self.ticket_id),
+            view=DoneCommentPostedView(self.ticket_id, origin="on_hold"),
             ephemeral=True
         )
 
@@ -678,12 +793,34 @@ class GreetingChoiceView(discord.ui.View):
             view=GreetingPostedView(self.ticket_id)
         )
 
+    @discord.ui.button(
+        label="⬅️ Quay lại",
+        style=discord.ButtonStyle.secondary
+    )
+    async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(
+            content=None,
+            embed=build_embed(self.ticket_id),
+            view=TicketView(self.ticket_id)
+        )
+
 
 class GreetingPostedView(discord.ui.View):
 
     def __init__(self, ticket_id):
         super().__init__(timeout=600)
         self.ticket_id = find_ticket_id(ticket_id)
+
+    @discord.ui.button(
+        label="⬅️ Chọn lại Greeting",
+        style=discord.ButtonStyle.secondary
+    )
+    async def rechoose(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(
+            content="### 💬 Choose Greeting Language:",
+            embed=build_embed(self.ticket_id),
+            view=GreetingChoiceView(self.ticket_id)
+        )
 
     @discord.ui.button(
         label="☑ Posted (Done)",
@@ -702,9 +839,40 @@ class GreetingPostedView(discord.ui.View):
 
 class DoneCommentPostedView(discord.ui.View):
 
-    def __init__(self, ticket_id):
+    def __init__(self, ticket_id, origin: str = "done"):
         super().__init__(timeout=600)
         self.ticket_id = find_ticket_id(ticket_id)
+        self.origin = origin
+
+    @discord.ui.button(
+        label="⬅️ Chọn lại mẫu",
+        style=discord.ButtonStyle.secondary
+    )
+    async def rechoose(self, interaction: discord.Interaction, button: discord.ui.Button):
+        ticket = tickets[self.ticket_id]
+        if not ticket.get("done_comment"):
+            ticket["done_comment_type"] = None
+            if not ticket.get("com"):
+                ticket["ticket_type"] = None
+
+        if self.origin == "cancel":
+            await interaction.response.edit_message(
+                content="### 🔴 Choose Cancel Reason (No COM needed):",
+                embed=build_embed(self.ticket_id),
+                view=CancelOptionsView(self.ticket_id)
+            )
+        elif self.origin == "on_hold":
+            await interaction.response.edit_message(
+                content="### ⏸️ Choose On Hold Reason (No COM needed):",
+                embed=build_embed(self.ticket_id),
+                view=OnHoldOptionsView(self.ticket_id)
+            )
+        else:
+            await interaction.response.edit_message(
+                content="### 🟢 Choose Done Template:",
+                embed=build_embed(self.ticket_id),
+                view=DoneCommentView(self.ticket_id)
+            )
 
     @discord.ui.button(
         label="☑ Posted (Done)",
@@ -780,9 +948,15 @@ class CancelSelect(discord.ui.Select):
                 emoji="❌",
                 description="Không thực hiện được do sku set up Multi-Source (mở form)"
             ),
+            discord.SelectOption(
+                label="🏷️ Other / Lý do khác",
+                value="other",
+                emoji="🏷️",
+                description="Nhập lý do và nội dung comment tùy chỉnh (mở form)"
+            ),
         ]
         super().__init__(
-            placeholder="🔽 Chọn 1 trong 9 lý do Cancel...",
+            placeholder="🔽 Chọn lý do Cancel (hoặc Lý do khác)...",
             min_values=1,
             max_values=1,
             options=options
@@ -804,6 +978,9 @@ class CancelSelect(discord.ui.Select):
         elif val == "multi_source":
             await interaction.response.send_modal(CancelMultiSourceSkuModal(self.ticket_id))
             return
+        elif val == "other":
+            await interaction.response.send_modal(CancelOtherModal(self.ticket_id))
+            return
 
         ticket["ticket_type"] = "cancel"
         ticket["status"] = "cancelled"
@@ -822,17 +999,29 @@ class CancelSelect(discord.ui.Select):
         await interaction.response.edit_message(
             content=f"📋 **{type_name} — #{self.ticket_id}**\n\n```text\n{template_text}\n```",
             embed=build_embed(self.ticket_id),
-            view=DoneCommentPostedView(self.ticket_id)
+            view=DoneCommentPostedView(self.ticket_id, origin="cancel")
         )
 
 
 class CancelOptionsView(discord.ui.View):
-    """Dropdown selector with all 9 Cancel reasons"""
+    """Dropdown selector with Cancel reasons + Back button"""
 
     def __init__(self, ticket_id):
         super().__init__(timeout=600)
         self.ticket_id = find_ticket_id(ticket_id)
         self.add_item(CancelSelect(ticket_id))
+
+    @discord.ui.button(
+        label="⬅️ Quay lại",
+        style=discord.ButtonStyle.secondary,
+        row=1
+    )
+    async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(
+            content=None,
+            embed=build_embed(self.ticket_id),
+            view=TicketView(self.ticket_id)
+        )
 
 
 class OnHoldSelect(discord.ui.Select):
@@ -920,9 +1109,15 @@ class OnHoldSelect(discord.ui.Select):
                 emoji="🎯",
                 description="Cần thêm thông tin SKU để xác định Target Collection"
             ),
+            discord.SelectOption(
+                label="🏷️ Other / Lý do khác",
+                value="other",
+                emoji="🏷️",
+                description="Nhập lý do và nội dung tạm dừng tùy chỉnh (mở form)"
+            ),
         ]
         super().__init__(
-            placeholder="🔽 Chọn mẫu On Hold (Vault hoặc Standard)...",
+            placeholder="🔽 Chọn mẫu On Hold (hoặc Lý do khác)...",
             min_values=1,
             max_values=1,
             options=options
@@ -960,6 +1155,9 @@ class OnHoldSelect(discord.ui.Select):
         elif val == "eng_bug":
             await interaction.response.send_modal(EngineeringBugModal(self.ticket_id))
             return
+        elif val == "other":
+            await interaction.response.send_modal(OnHoldOtherModal(self.ticket_id))
+            return
 
         ticket["ticket_type"] = "on_hold"
         ticket["status"] = "on_hold"
@@ -980,17 +1178,29 @@ class OnHoldSelect(discord.ui.Select):
         await interaction.response.edit_message(
             content=f"📋 **{type_name} — #{self.ticket_id}**\n\n```text\n{template_text}\n```",
             embed=build_embed(self.ticket_id),
-            view=DoneCommentPostedView(self.ticket_id)
+            view=DoneCommentPostedView(self.ticket_id, origin="on_hold")
         )
 
 
 class OnHoldOptionsView(discord.ui.View):
-    """Dropdown selector with all On Hold templates (Vault + Standard)"""
+    """Dropdown selector with all On Hold templates (Vault + Standard) + Back button"""
 
     def __init__(self, ticket_id):
         super().__init__(timeout=600)
         self.ticket_id = find_ticket_id(ticket_id)
         self.add_item(OnHoldSelect(ticket_id))
+
+    @discord.ui.button(
+        label="⬅️ Quay lại",
+        style=discord.ButtonStyle.secondary,
+        row=1
+    )
+    async def back_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(
+            content=None,
+            embed=build_embed(self.ticket_id),
+            view=TicketView(self.ticket_id)
+        )
 
 
 class DoneCommentView(discord.ui.View):
@@ -1034,6 +1244,21 @@ class DoneCommentView(discord.ui.View):
             self.add_item(btn_normal)
             self.add_item(btn_excluded)
 
+        btn_other = discord.ui.Button(
+            label="📝 Other / Tùy chỉnh...",
+            style=discord.ButtonStyle.secondary
+        )
+        btn_other.callback = self.done_other
+
+        btn_back = discord.ui.Button(
+            label="⬅️ Quay lại",
+            style=discord.ButtonStyle.secondary
+        )
+        btn_back.callback = self.back_button
+
+        self.add_item(btn_other)
+        self.add_item(btn_back)
+
     async def normal_done_en(self, interaction: discord.Interaction):
         tickets[self.ticket_id]["ticket_type"] = "do"
         tickets[self.ticket_id]["done_comment_type"] = "Normal Done"
@@ -1041,7 +1266,7 @@ class DoneCommentView(discord.ui.View):
         await interaction.response.edit_message(
             content=f"📋 **Normal Done — #{self.ticket_id}**\n\n```text\n{NORMAL_DONE_TEMPLATE}\n```",
             embed=build_embed(self.ticket_id),
-            view=DoneCommentPostedView(self.ticket_id)
+            view=DoneCommentPostedView(self.ticket_id, origin="done")
         )
 
     async def normal_done_cn(self, interaction: discord.Interaction):
@@ -1051,7 +1276,7 @@ class DoneCommentView(discord.ui.View):
         await interaction.response.edit_message(
             content=f"📋 **Mandarin Done — #{self.ticket_id}**\n\n```text\n{MANDARIN_NORMAL_DONE_TEMPLATE}\n```",
             embed=build_embed(self.ticket_id),
-            view=DoneCommentPostedView(self.ticket_id)
+            view=DoneCommentPostedView(self.ticket_id, origin="done")
         )
 
     async def excluded_done_en(self, interaction: discord.Interaction):
@@ -1062,6 +1287,18 @@ class DoneCommentView(discord.ui.View):
     async def excluded_done_cn(self, interaction: discord.Interaction):
         await interaction.response.send_modal(
             ExcludedDoneModal(self.ticket_id, is_mandarin=True)
+        )
+
+    async def done_other(self, interaction: discord.Interaction):
+        await interaction.response.send_modal(
+            DoneOtherModal(self.ticket_id)
+        )
+
+    async def back_button(self, interaction: discord.Interaction):
+        await interaction.response.edit_message(
+            content=None,
+            embed=build_embed(self.ticket_id),
+            view=TicketView(self.ticket_id)
         )
 
 
@@ -1160,6 +1397,19 @@ class TicketView(discord.ui.View):
                 and bool(ticket.get("hours"))
                 and not ticket.get("done_done")
             )
+
+        # Undo button: enabled whenever any step has been started/progressed
+        has_progress = bool(
+            ticket.get("assign")
+            or ticket.get("pending")
+            or ticket.get("greeting")
+            or ticket.get("com")
+            or ticket.get("done_comment")
+            or ticket.get("hours")
+            or ticket.get("done_done")
+            or status != "not_started"
+        )
+        self.undo_button.disabled = not has_progress
 
     # ========================================================
     # ROW 0: START -> GREETING -> COM -> RESUME
@@ -1282,7 +1532,7 @@ class TicketView(discord.ui.View):
         )
 
     # ========================================================
-    # ROW 2: LOG HOURS & ACTION (PAUSE / CLOSE / DONE)
+    # ROW 2: LOG HOURS, ACTION (DONE/CLOSE/PAUSE) & UNDO
     # ========================================================
 
     @discord.ui.button(
@@ -1320,6 +1570,22 @@ class TicketView(discord.ui.View):
             ticket["status"] = "done"
             ticket["completed_at"] = datetime.now()
 
+        self.update_buttons()
+
+        await interaction.response.edit_message(
+            embed=build_embed(self.ticket_id),
+            view=self,
+            content=None
+        )
+        await update_card(self.ticket_id, interaction.client)
+
+    @discord.ui.button(
+        label="↩️ Undo",
+        style=discord.ButtonStyle.secondary,
+        row=2
+    )
+    async def undo_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        success, msg = undo_ticket_step(self.ticket_id)
         self.update_buttons()
 
         await interaction.response.edit_message(

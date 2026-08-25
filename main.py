@@ -11,6 +11,7 @@ from ticket_manager import (
     reopen_ticket,
     add_note,
     find_ticket_id,
+    undo_ticket_step,
 )
 
 from views import (
@@ -189,7 +190,45 @@ async def delete(
         f"🗑️ Ticket #{ticket_id} deleted."
     )
 
-delete.autocomplete("ticket")(ticket_autocomplete)
+# ============================================================
+# /UNDO
+# ============================================================
+
+@tree.command(
+    name="undo",
+    description="Hoàn tác bước gần nhất của ticket"
+)
+@discord.app_commands.describe(ticket="Ticket ID (ví dụ: ENRICH-1469350)")
+async def undo_cmd(
+    interaction: discord.Interaction,
+    ticket: str
+):
+    ticket_id = find_ticket_id(ticket)
+
+    if not ticket_exists(ticket_id):
+        await interaction.response.send_message(
+            f"❌ Ticket #{ticket.upper()} không tồn tại.",
+            ephemeral=True
+        )
+        return
+
+    success, msg = undo_ticket_step(ticket_id)
+    if not success:
+        await interaction.response.send_message(
+            f"⚠️ **Ticket #{ticket_id}**: {msg}",
+            ephemeral=True
+        )
+        return
+
+    await update_card(ticket_id, bot)
+    await interaction.response.send_message(
+        f"↩️ **Ticket #{ticket_id}**: {msg}",
+        embed=build_embed(ticket_id),
+        view=TicketView(ticket_id),
+        ephemeral=True
+    )
+
+undo_cmd.autocomplete("ticket")(ticket_autocomplete)
 
 
 # ============================================================

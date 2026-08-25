@@ -239,5 +239,53 @@ def add_note(ticket_id, note_text):
     return True
 
 
+def undo_ticket_step(ticket_id):
+    resolved = find_ticket_id(ticket_id)
+    ticket = tickets.get(resolved)
+    if not ticket:
+        return False, "Ticket không tồn tại."
+
+    if ticket.get("done_done"):
+        ticket["done_done"] = False
+        ticket["status"] = "in_progress"
+        ticket["completed_at"] = None
+        save_ticket(resolved)
+        return True, "Đã hoàn tác bước Done - Done / Đóng / Tạm dừng (Trở về Đang xử lý)."
+
+    if ticket.get("hours"):
+        ticket["hours"] = False
+        save_ticket(resolved)
+        return True, "Đã hoàn tác bước Log Hours."
+
+    if ticket.get("done_comment"):
+        ticket["done_comment"] = False
+        ticket["done_comment_type"] = None
+        ticket["ticket_type"] = None
+        ticket["status"] = "in_progress"
+        save_ticket(resolved)
+        return True, "Đã hoàn tác bước Done / Cancel / On Hold Comment."
+
+    if ticket.get("com"):
+        ticket["com"] = False
+        ticket["ticket_type"] = None
+        save_ticket(resolved)
+        return True, "Đã hoàn tác bước COM Submitted."
+
+    if ticket.get("greeting"):
+        ticket["greeting"] = False
+        ticket["language"] = None
+        save_ticket(resolved)
+        return True, "Đã hoàn tác bước Greeting."
+
+    if ticket.get("assign") or ticket.get("pending") or ticket.get("status") == "in_progress":
+        ticket["assign"] = False
+        ticket["pending"] = False
+        ticket["status"] = "not_started"
+        save_ticket(resolved)
+        return True, "Đã hoàn tác bước Start (Reset về Chưa bắt đầu)."
+
+    return False, "Không có bước nào trước đó để hoàn tác."
+
+
 # Automatically initialize DB on import
 init_db()
