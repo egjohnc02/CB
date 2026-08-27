@@ -205,8 +205,17 @@ def reopen_ticket(ticket_id):
         return False
 
     ticket["status"] = "in_progress"
+    ticket["com"] = False
+    ticket["done_comment"] = False
+    ticket["done_comment_type"] = None
+    ticket["ticket_type"] = None
+    ticket["hours"] = False
     ticket["done_done"] = False
     ticket["completed_at"] = None
+
+    ticket["assign"] = True
+    ticket["pending"] = True
+
     save_ticket(resolved)
     return True
 

@@ -232,6 +232,49 @@ undo_cmd.autocomplete("ticket")(ticket_autocomplete)
 
 
 # ============================================================
+# /REOPEN
+# ============================================================
+
+@tree.command(
+    name="reopen",
+    description="Mở lại (Re-open) một ticket đã hoàn thành hoặc đã hủy"
+)
+@discord.app_commands.describe(ticket="Ticket ID (ví dụ: ENRICH-1469350)")
+async def reopen_cmd(
+    interaction: discord.Interaction,
+    ticket: str
+):
+    ticket_id = find_ticket_id(ticket)
+
+    if not ticket_exists(ticket_id):
+        await interaction.response.send_message(
+            f"❌ Ticket #{ticket.upper()} không tồn tại.",
+            ephemeral=True
+        )
+        return
+
+    ticket_data = tickets[ticket_id]
+    if ticket_data.get("status") not in ("done", "cancelled"):
+        await interaction.response.send_message(
+            f"⚠️ Ticket #{ticket_id} hiện đang ở trạng thái `{ticket_data.get('status')}` (chỉ có thể Re-open khi đã Done hoặc Cancelled).",
+            ephemeral=True
+        )
+        return
+
+    reopen_ticket(ticket_id)
+    await update_card(ticket_id, bot)
+
+    await interaction.response.send_message(
+        f"🔄 Ticket #{ticket_id} đã được **RE-OPEN** thành công!",
+        embed=build_embed(ticket_id),
+        view=TicketView(ticket_id),
+        ephemeral=True
+    )
+
+reopen_cmd.autocomplete("ticket")(ticket_autocomplete)
+
+
+# ============================================================
 # MESSAGE HANDLER
 # ============================================================
 
@@ -258,18 +301,31 @@ async def on_message(message: discord.Message):
         ticket = tickets[ticket_id]
 
         # ----------------------------------------------------
-        # REOPEN AFTER 24 HOURS
+        # REOPEN TICKET (DONE hoặc CANCEL từ ngày hôm trước)
         # ----------------------------------------------------
-        if ticket["status"] == "done" and ticket["completed_at"]:
+        if ticket.get("status") in ("done", "cancelled"):
             from datetime import datetime
-            elapsed = datetime.now() - ticket["completed_at"]
+            now_date = datetime.now().date()
+            is_previous_day = False
 
-            if elapsed.total_seconds() >= 86400:
+            if ticket.get("completed_at"):
+                is_previous_day = ticket["completed_at"].date() < now_date
+            elif ticket.get("created_at"):
+                is_previous_day = ticket["created_at"].date() < now_date
+
+            if is_previous_day:
                 reopen_ticket(ticket_id)
-                await update_card(ticket_id, bot)
+                ticket["channel_id"] = message.channel.id
+
+                sent = await message.channel.send(
+                    embed=build_embed(ticket_id),
+                    view=TicketView(ticket_id)
+                )
+                ticket["message_id"] = sent.id
+                save_ticket(ticket_id)
 
                 await message.reply(
-                    f"🔄 Ticket #{ticket_id} has been **RE-OPENED**."
+                    f"🔄 Ticket #{ticket_id} (đã xong/hủy từ hôm trước) đã được **RE-OPEN** và mở lại tại đây!"
                 )
                 return
 
