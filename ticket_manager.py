@@ -215,6 +215,7 @@ def reopen_ticket(ticket_id):
 
     ticket["assign"] = True
     ticket["pending"] = True
+    ticket["greeting"] = True  # Re-opened ticket does not require greeting
 
     save_ticket(resolved)
     return True
