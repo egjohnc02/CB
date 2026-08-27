@@ -1,4 +1,5 @@
 import discord
+from discord.ext import tasks
 import re
 
 from config import TOKEN, GUILD_ID
@@ -12,6 +13,7 @@ from ticket_manager import (
     add_note,
     find_ticket_id,
     undo_ticket_step,
+    cleanup_expired_tickets,
 )
 
 from views import (
@@ -425,6 +427,20 @@ async def on_message(message: discord.Message):
 
 
 # ============================================================
+# BACKGROUND TASKS (CLEANUP SAU 30 NGÀY)
+# ============================================================
+
+@tasks.loop(hours=24)
+async def daily_cleanup_task():
+    try:
+        deleted = cleanup_expired_tickets(days=30)
+        if deleted > 0:
+            print(f"🧹 [DAILY TASK] Đã xóa {deleted} ticket hoàn thành/hủy hơn 30 ngày.")
+    except Exception as e:
+        print(f"[ERROR] daily_cleanup_task: {e}")
+
+
+# ============================================================
 # READY
 # ============================================================
 
@@ -447,6 +463,10 @@ async def on_ready():
         print(f"✅ Synced {len(synced)} commands.")
     except Exception as e:
         print(f"❌ Sync error: {e}")
+
+    if not daily_cleanup_task.is_running():
+        daily_cleanup_task.start()
+        print("✅ Daily 30-day ticket cleanup task started.")
 
     print("================================")
 

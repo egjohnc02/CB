@@ -91,6 +91,43 @@ def init_db():
 
     conn.close()
     print(f"📦 [DATABASE] Loaded {len(tickets)} tickets from {DB_PATH}")
+    cleanup_expired_tickets(days=30)
+
+
+def cleanup_expired_tickets(days=30):
+    """
+    Tự động xóa các ticket đã Done hoặc Cancel sau đúng 30 ngày (tính từ completed_at hoặc created_at).
+    """
+    now = datetime.now()
+    to_delete = []
+
+    for tid, t in list(tickets.items()):
+        status = t.get("status")
+        if status in ("done", "cancelled"):
+            finished_time = t.get("completed_at") or t.get("created_at")
+            if finished_time:
+                elapsed = now - finished_time
+                if elapsed.total_seconds() >= days * 86400:
+                    to_delete.append(tid)
+
+    if not to_delete:
+        return 0
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    deleted_count = 0
+
+    for tid in to_delete:
+        if tid in tickets:
+            del tickets[tid]
+        cursor.execute("DELETE FROM tickets WHERE ticket_id = ?", (tid,))
+        deleted_count += 1
+
+    conn.commit()
+    conn.close()
+
+    print(f"🧹 [CLEANUP] Tự động xóa {deleted_count} ticket đã hoàn thành/hủy quá {days} ngày.")
+    return deleted_count
 
 
 def save_ticket(ticket_id):
