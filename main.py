@@ -65,6 +65,33 @@ async def ticket_autocomplete(
     return choices[:25]
 
 
+async def safe_respond(interaction: discord.Interaction, content=None, embed=None, view=None, ephemeral=True):
+    try:
+        if interaction.response.is_done():
+            kwargs = {"ephemeral": ephemeral}
+            if content:
+                kwargs["content"] = content
+            if embed:
+                kwargs["embed"] = embed
+            if view:
+                kwargs["view"] = view
+            await interaction.followup.send(**kwargs)
+        else:
+            kwargs = {"ephemeral": ephemeral}
+            if content:
+                kwargs["content"] = content
+            if embed:
+                kwargs["embed"] = embed
+            if view:
+                kwargs["view"] = view
+            await interaction.response.send_message(**kwargs)
+    except discord.HTTPException as e:
+        if getattr(e, "code", None) == 40060:
+            pass  # Already acknowledged by another instance
+        else:
+            print(f"[WARN] safe_respond HTTPException: {e}")
+
+
 # ============================================================
 # /STATUS
 # ============================================================
@@ -81,13 +108,15 @@ async def status(
     ticket_id = find_ticket_id(ticket)
 
     if not ticket_exists(ticket_id):
-        await interaction.response.send_message(
-            f"❌ Ticket #{ticket.upper()} not found.",
+        await safe_respond(
+            interaction,
+            content=f"❌ Ticket #{ticket.upper()} not found.",
             ephemeral=True
         )
         return
 
-    await interaction.response.send_message(
+    await safe_respond(
+        interaction,
         embed=build_embed(ticket_id),
         view=TicketView(ticket_id),
         ephemeral=True
@@ -122,7 +151,8 @@ async def list_tickets(
 ):
     filter_val = filter.value if filter else "all"
     embed = build_list_embed(filter_val)
-    await interaction.response.send_message(
+    await safe_respond(
+        interaction,
         embed=embed,
         ephemeral=True
     )
@@ -138,7 +168,8 @@ async def list_tickets(
 )
 async def onhold_cmd(interaction: discord.Interaction):
     embed = build_on_hold_reminder_embed()
-    await interaction.response.send_message(
+    await safe_respond(
+        interaction,
         embed=embed,
         ephemeral=True
     )
@@ -150,7 +181,8 @@ async def onhold_cmd(interaction: discord.Interaction):
 )
 async def remind_cmd(interaction: discord.Interaction):
     embed = build_on_hold_reminder_embed()
-    await interaction.response.send_message(
+    await safe_respond(
+        interaction,
         embed=embed,
         ephemeral=True
     )
@@ -176,8 +208,9 @@ async def note(
     ticket_id = find_ticket_id(ticket)
 
     if not ticket_exists(ticket_id):
-        await interaction.response.send_message(
-            f"❌ Ticket #{ticket.upper()} not found.",
+        await safe_respond(
+            interaction,
+            content=f"❌ Ticket #{ticket.upper()} not found.",
             ephemeral=True
         )
         return
@@ -185,8 +218,9 @@ async def note(
     add_note(ticket_id, text)
     await update_card(ticket_id, bot)
 
-    await interaction.response.send_message(
-        f"📝 Added note to **Ticket #{ticket_id}**:\n> {text}",
+    await safe_respond(
+        interaction,
+        content=f"📝 Added note to **Ticket #{ticket_id}**:\n> {text}",
         ephemeral=True
     )
 
@@ -209,15 +243,19 @@ async def delete(
     ticket_id = find_ticket_id(ticket)
 
     if not delete_ticket(ticket_id):
-        await interaction.response.send_message(
-            f"❌ Ticket #{ticket.upper()} not found.",
+        await safe_respond(
+            interaction,
+            content=f"❌ Ticket #{ticket.upper()} not found.",
             ephemeral=True
         )
         return
 
-    await interaction.response.send_message(
-        f"🗑️ Ticket #{ticket_id} deleted."
+    await safe_respond(
+        interaction,
+        content=f"🗑️ Ticket #{ticket_id} deleted.",
+        ephemeral=False
     )
+
 
 # ============================================================
 # /UNDO
@@ -235,23 +273,26 @@ async def undo_cmd(
     ticket_id = find_ticket_id(ticket)
 
     if not ticket_exists(ticket_id):
-        await interaction.response.send_message(
-            f"❌ Ticket #{ticket.upper()} không tồn tại.",
+        await safe_respond(
+            interaction,
+            content=f"❌ Ticket #{ticket.upper()} không tồn tại.",
             ephemeral=True
         )
         return
 
     success, msg = undo_ticket_step(ticket_id)
     if not success:
-        await interaction.response.send_message(
-            f"⚠️ **Ticket #{ticket_id}**: {msg}",
+        await safe_respond(
+            interaction,
+            content=f"⚠️ **Ticket #{ticket_id}**: {msg}",
             ephemeral=True
         )
         return
 
     await update_card(ticket_id, bot)
-    await interaction.response.send_message(
-        f"↩️ **Ticket #{ticket_id}**: {msg}",
+    await safe_respond(
+        interaction,
+        content=f"↩️ **Ticket #{ticket_id}**: {msg}",
         embed=build_embed(ticket_id),
         view=TicketView(ticket_id),
         ephemeral=True
@@ -276,16 +317,18 @@ async def reopen_cmd(
     ticket_id = find_ticket_id(ticket)
 
     if not ticket_exists(ticket_id):
-        await interaction.response.send_message(
-            f"❌ Ticket #{ticket.upper()} không tồn tại.",
+        await safe_respond(
+            interaction,
+            content=f"❌ Ticket #{ticket.upper()} không tồn tại.",
             ephemeral=True
         )
         return
 
     ticket_data = tickets[ticket_id]
     if ticket_data.get("status") not in ("done", "cancelled"):
-        await interaction.response.send_message(
-            f"⚠️ Ticket #{ticket_id} hiện đang ở trạng thái `{ticket_data.get('status')}` (chỉ có thể Re-open khi đã Done hoặc Cancelled).",
+        await safe_respond(
+            interaction,
+            content=f"⚠️ Ticket #{ticket_id} hiện đang ở trạng thái `{ticket_data.get('status')}` (chỉ có thể Re-open khi đã Done hoặc Cancelled).",
             ephemeral=True
         )
         return
@@ -293,8 +336,9 @@ async def reopen_cmd(
     reopen_ticket(ticket_id)
     await update_card(ticket_id, bot)
 
-    await interaction.response.send_message(
-        f"🔄 Ticket #{ticket_id} đã được **RE-OPEN** thành công!",
+    await safe_respond(
+        interaction,
+        content=f"🔄 Ticket #{ticket_id} đã được **RE-OPEN** thành công!",
         embed=build_embed(ticket_id),
         view=TicketView(ticket_id),
         ephemeral=True
