@@ -4,7 +4,16 @@ import os
 from datetime import datetime
 
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "tickets.db")
+# Persistent data directory support (for Railway Volume & local dev)
+DATA_DIR = os.environ.get("DATA_DIR")
+if not DATA_DIR:
+    if os.path.exists("/app/data"):
+        DATA_DIR = "/app/data"
+    else:
+        DATA_DIR = os.path.dirname(__file__)
+
+os.makedirs(DATA_DIR, exist_ok=True)
+DB_PATH = os.path.join(DATA_DIR, "tickets.db")
 tickets = {}
 
 
