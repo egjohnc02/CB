@@ -187,12 +187,88 @@ def build_list_embed(filter_status=None):
         pct = progress(t)
         cur_step = get_current_step(t)
         lang = f" `{t['language']}`" if t.get("language") else ""
+        extra_info = ""
+
+        if t.get("status") == "on_hold":
+            paused_time = t.get("completed_at") or t.get("created_at")
+            if paused_time:
+                from datetime import datetime
+                diff = datetime.now() - paused_time
+                days = diff.days
+                hours = int(diff.total_seconds() // 3600) % 24
+                if days >= 3:
+                    extra_info = f"\n⚠️ **Đã dừng:** `{days} ngày {hours}h` *(Quá 3 ngày!)*"
+                elif days >= 1:
+                    extra_info = f"\n⏳ **Đã dừng:** `{days} ngày {hours}h`"
+                else:
+                    extra_info = f"\n⏳ **Đã dừng:** `{hours}h`"
 
         embed.add_field(
             name=f"🎫 #{tid}{lang}",
-            value=f"👉 **Bước hiện tại:** `{cur_step}`\n📊 **Tiến độ:** {progress_bar(pct)} `{pct}%`",
+            value=f"👉 **Bước hiện tại:** `{cur_step}`\n📊 **Tiến độ:** {progress_bar(pct)} `{pct}%`{extra_info}",
             inline=False
         )
+
+    return embed
+
+
+def build_on_hold_reminder_embed():
+    on_hold_tickets = {
+        tid: t for tid, t in tickets.items() if t.get("status") == "on_hold"
+    }
+
+    if not on_hold_tickets:
+        embed = discord.Embed(
+            title="⏸️ Danh Sách Nhắc Nhở Ticket On Hold",
+            description="🎉 **Không có ticket nào đang tạm dừng (On Hold)!**\nChúc bạn một ngày làm việc thuận lợi và hiệu quả!",
+            color=discord.Color.green()
+        )
+        return embed
+
+    total = len(on_hold_tickets)
+    overdue_count = 0
+
+    embed = discord.Embed(
+        title="🔔 NHẮC NHỞ ĐẦU CA: Ticket On Hold Cần Kiểm Tra",
+        description=(
+            f"Chào buổi làm việc! Hiện có **`{total}`** ticket đang tạm dừng (On Hold).\n"
+            f"💡 *Hãy kiểm tra lại phản hồi từ Supplier/Merchant để tiếp tục (`Resume`) hoặc hủy (`Cancel - 3 Days`).*"
+        ),
+        color=discord.Color.orange()
+    )
+
+    for tid, t in list(on_hold_tickets.items())[:25]:
+        paused_time = t.get("completed_at") or t.get("created_at")
+        days_str = ""
+        is_overdue = False
+
+        if paused_time:
+            from datetime import datetime
+            diff = datetime.now() - paused_time
+            days = diff.days
+            hours = int(diff.total_seconds() // 3600) % 24
+            if days >= 3:
+                is_overdue = True
+                overdue_count += 1
+                days_str = f"⚠️ **Đã dừng `{days} ngày {hours}h` (Quá hạn 3 ngày!)**"
+            elif days >= 1:
+                days_str = f"⏳ Đã dừng `{days} ngày {hours}h`"
+            else:
+                days_str = f"⏳ Đã dừng `{hours}h`"
+        else:
+            days_str = "⏳ Đang tạm dừng"
+
+        reason = t.get("done_comment_type") or "On Hold"
+        tip = " 👉 **Gợi ý:** Đã quá 3 ngày không phản hồi ➔ Có thể đóng ticket (`Cancel - 3 Days`)." if is_overdue else " 👉 Dùng `/status` để mở lại card tiếp tục."
+
+        embed.add_field(
+            name=f"🎫 #{tid} — {days_str}",
+            value=f"📌 **Lý do:** `{reason}`\n{tip}",
+            inline=False
+        )
+
+    if overdue_count > 0:
+        embed.set_footer(text=f"⚠️ Có {overdue_count} ticket đã dừng >= 3 ngày cần kiểm tra xử lý gấp!")
 
     return embed
 
@@ -1478,6 +1554,7 @@ class TicketView(discord.ui.View):
         ticket["done_comment"] = False
         ticket["ticket_type"] = None
         ticket["done_done"] = False
+        ticket["completed_at"] = None
 
         self.update_buttons()
 
@@ -1563,6 +1640,7 @@ class TicketView(discord.ui.View):
 
         if ticket.get("ticket_type") == "on_hold":
             ticket["status"] = "on_hold"
+            ticket["completed_at"] = datetime.now()
         elif ticket.get("ticket_type") == "cancel":
             ticket["status"] = "cancelled"
             ticket["completed_at"] = datetime.now()

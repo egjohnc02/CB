@@ -19,6 +19,7 @@ from views import (
     build_embed,
     update_card,
     build_list_embed,
+    build_on_hold_reminder_embed,
 )
 
 
@@ -121,6 +122,34 @@ async def list_tickets(
 ):
     filter_val = filter.value if filter else "all"
     embed = build_list_embed(filter_val)
+    await interaction.response.send_message(
+        embed=embed,
+        ephemeral=True
+    )
+
+
+# ============================================================
+# /ONHOLD & /REMIND (NHẮC NHỞ ĐẦU CA LÀM VIỆC)
+# ============================================================
+
+@tree.command(
+    name="onhold",
+    description="Nhắc nhở kiểm tra các ticket đang tạm dừng (On Hold) khi bắt đầu làm việc"
+)
+async def onhold_cmd(interaction: discord.Interaction):
+    embed = build_on_hold_reminder_embed()
+    await interaction.response.send_message(
+        embed=embed,
+        ephemeral=True
+    )
+
+
+@tree.command(
+    name="remind",
+    description="Nhắc nhở các ticket On Hold cần kiểm tra phản hồi trong ngày"
+)
+async def remind_cmd(interaction: discord.Interaction):
+    embed = build_on_hold_reminder_embed()
     await interaction.response.send_message(
         embed=embed,
         ephemeral=True
