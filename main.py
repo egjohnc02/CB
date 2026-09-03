@@ -24,6 +24,7 @@ from views import (
     build_list_embed,
     ListDashboardView,
     build_on_hold_reminder_embed,
+    get_current_step,
 )
 
 
@@ -50,7 +51,7 @@ ticket_pattern = re.compile(
 
 
 # ============================================================
-# AUTOCOMPLETE HELPER
+# AUTOCOMPLETE HELPER (ƯU TIÊN TICKET IN PROGRESS & ACTIVE)
 # ============================================================
 
 async def ticket_autocomplete(
@@ -58,15 +59,58 @@ async def ticket_autocomplete(
     current: str
 ) -> list[discord.app_commands.Choice[str]]:
     current_clean = current.strip().upper()
-    choices = []
 
-    for tid in tickets.keys():
+    status_priority = {
+        "in_progress": 1,
+        "on_hold": 2,
+        "not_started": 3,
+        "done": 4,
+        "cancelled": 5
+    }
+
+    status_icons = {
+        "in_progress": "🔵",
+        "on_hold": "🟠",
+        "not_started": "🟡",
+        "done": "🟢",
+        "cancelled": "🔴"
+    }
+
+    matching = []
+    for tid, t in tickets.items():
         if not current_clean or current_clean in tid:
-            choices.append(
-                discord.app_commands.Choice(name=tid, value=tid)
-            )
+            st = t.get("status", "not_started")
+            prio = status_priority.get(st, 99)
+            icon = status_icons.get(st, "⚪")
 
-    return choices[:25]
+            step_text = ""
+            if st == "in_progress":
+                step_text = f" - {get_current_step(t)}"
+            elif st == "on_hold":
+                step_text = f" - {t.get('done_comment_type', 'On Hold')}"
+            elif st == "done":
+                step_text = " - Done"
+            elif st == "cancelled":
+                step_text = " - Cancelled"
+
+            label = f"{icon} {tid}{step_text}"
+            if len(label) > 100:
+                label = label[:97] + "..."
+
+            c_time = t.get("created_at")
+            time_score = c_time.timestamp() if (c_time and hasattr(c_time, "timestamp")) else 0
+
+            matching.append((prio, -time_score, tid, label))
+
+    matching.sort()
+
+    choices = []
+    for _, _, tid, label in matching[:25]:
+        choices.append(
+            discord.app_commands.Choice(name=label, value=tid)
+        )
+
+    return choices
 
 
 async def safe_respond(interaction: discord.Interaction, content=None, embed=None, view=None, ephemeral=True):
@@ -167,6 +211,25 @@ async def list_tickets(
     embed = build_list_embed(filter_val, date_val)
     view = ListDashboardView(filter_val, date_val)
 
+    await safe_respond(
+        interaction,
+        embed=embed,
+        view=view,
+        ephemeral=True
+    )
+
+
+# ============================================================
+# /INPROGRESS (XEM CÁC TICKET ĐANG XỬ LÝ)
+# ============================================================
+
+@tree.command(
+    name="inprogress",
+    description="Xem nhanh toàn bộ các ticket đang trong tiến trình xử lý (In Progress)"
+)
+async def inprogress_cmd(interaction: discord.Interaction):
+    embed = build_list_embed(filter_status="in_progress", date_filter="all")
+    view = ListDashboardView(filter_status="in_progress", date_filter="all")
     await safe_respond(
         interaction,
         embed=embed,

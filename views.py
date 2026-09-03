@@ -257,14 +257,28 @@ class ListDashboardView(discord.ui.View):
     def update_buttons(self):
         for child in self.children:
             if isinstance(child, discord.ui.Button):
+                # Date buttons (Row 0)
                 if child.custom_id == "btn_today":
                     child.style = discord.ButtonStyle.primary if self.date_filter == "today" else discord.ButtonStyle.secondary
                 elif child.custom_id == "btn_yesterday":
                     child.style = discord.ButtonStyle.primary if self.date_filter == "yesterday" else discord.ButtonStyle.secondary
                 elif child.custom_id == "btn_week":
                     child.style = discord.ButtonStyle.primary if self.date_filter == "week" else discord.ButtonStyle.secondary
-                elif child.custom_id == "btn_all":
+                elif child.custom_id == "btn_all_date":
                     child.style = discord.ButtonStyle.primary if self.date_filter == "all" else discord.ButtonStyle.secondary
+                # Status buttons (Row 1)
+                elif child.custom_id == "btn_st_in_progress":
+                    child.style = discord.ButtonStyle.primary if self.filter_status == "in_progress" else discord.ButtonStyle.secondary
+                elif child.custom_id == "btn_st_on_hold":
+                    child.style = discord.ButtonStyle.primary if self.filter_status == "on_hold" else discord.ButtonStyle.secondary
+                elif child.custom_id == "btn_st_done":
+                    child.style = discord.ButtonStyle.primary if self.filter_status == "done" else discord.ButtonStyle.secondary
+                elif child.custom_id == "btn_st_all":
+                    child.style = discord.ButtonStyle.primary if self.filter_status == "all" else discord.ButtonStyle.secondary
+
+    # ========================================================
+    # ROW 0: DATE FILTERS
+    # ========================================================
 
     @discord.ui.button(label="📅 Hôm nay", style=discord.ButtonStyle.primary, custom_id="btn_today", row=0)
     async def btn_today(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -287,9 +301,41 @@ class ListDashboardView(discord.ui.View):
         embed = build_list_embed(self.filter_status, self.date_filter)
         await interaction.response.edit_message(embed=embed, view=self)
 
-    @discord.ui.button(label="📅 Tất cả", style=discord.ButtonStyle.secondary, custom_id="btn_all", row=0)
-    async def btn_all(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @discord.ui.button(label="📅 Tất cả ngày", style=discord.ButtonStyle.secondary, custom_id="btn_all_date", row=0)
+    async def btn_all_date(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.date_filter = "all"
+        self.update_buttons()
+        embed = build_list_embed(self.filter_status, self.date_filter)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    # ========================================================
+    # ROW 1: STATUS FILTERS
+    # ========================================================
+
+    @discord.ui.button(label="🔵 Đang làm", style=discord.ButtonStyle.secondary, custom_id="btn_st_in_progress", row=1)
+    async def btn_st_in_progress(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.filter_status = "in_progress"
+        self.update_buttons()
+        embed = build_list_embed(self.filter_status, self.date_filter)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="🟠 Tạm dừng", style=discord.ButtonStyle.secondary, custom_id="btn_st_on_hold", row=1)
+    async def btn_st_on_hold(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.filter_status = "on_hold"
+        self.update_buttons()
+        embed = build_list_embed(self.filter_status, self.date_filter)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="🟢 Đã xong", style=discord.ButtonStyle.secondary, custom_id="btn_st_done", row=1)
+    async def btn_st_done(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.filter_status = "done"
+        self.update_buttons()
+        embed = build_list_embed(self.filter_status, self.date_filter)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="📋 Tất cả trạng thái", style=discord.ButtonStyle.primary, custom_id="btn_st_all", row=1)
+    async def btn_st_all(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.filter_status = "all"
         self.update_buttons()
         embed = build_list_embed(self.filter_status, self.date_filter)
         await interaction.response.edit_message(embed=embed, view=self)
