@@ -1,5 +1,5 @@
 import discord
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from ticket_manager import tickets, find_ticket_id, save_ticket, undo_ticket_step
 from templates import (
@@ -136,7 +136,7 @@ def get_current_step(ticket):
         return "🟢 Done - Done"
 
 
-def build_list_embed(filter_status=None):
+def build_list_embed(filter_status="all", date_filter="today"):
     if not tickets:
         embed = discord.Embed(
             title="📋 Ticket Overview Dashboard",
@@ -145,24 +145,42 @@ def build_list_embed(filter_status=None):
         )
         return embed
 
-    total = len(tickets)
-    in_prog = sum(1 for t in tickets.values() if t.get("status") == "in_progress")
-    paused = sum(1 for t in tickets.values() if t.get("status") == "on_hold")
-    done = sum(1 for t in tickets.values() if t.get("status") == "done")
-    cancelled = sum(1 for t in tickets.values() if t.get("status") == "cancelled")
-    not_started = sum(1 for t in tickets.values() if t.get("status") == "not_started")
+    now = datetime.now()
+    today = now.date()
+    yesterday = today - timedelta(days=1)
+    week_ago = today - timedelta(days=7)
 
-    embed = discord.Embed(
-        title="📋 Ticket Overview Dashboard",
-        description=(
-            f"**Tổng số:** `{total}` tickets\n"
-            f"🔵 In Progress: `{in_prog}` | 🟠 Paused: `{paused}` | 🟢 Done: `{done}` | 🔴 Cancelled: `{cancelled}` | 🟡 Not Started: `{not_started}`"
-        ),
-        color=discord.Color.blue()
-    )
-
-    filtered_tickets = {}
+    # 1. Filter by Date
+    date_filtered = {}
     for tid, t in tickets.items():
+        c_date = t.get("created_at").date() if t.get("created_at") else today
+        comp_date = t.get("completed_at").date() if t.get("completed_at") else None
+        st = t.get("status")
+
+        if date_filter == "today":
+            # Created today, or completed today, or active (in_progress/on_hold/not_started)
+            if c_date == today or comp_date == today or st in ("in_progress", "on_hold"):
+                date_filtered[tid] = t
+        elif date_filter == "yesterday":
+            if c_date == yesterday or comp_date == yesterday:
+                date_filtered[tid] = t
+        elif date_filter == "week":
+            if c_date >= week_ago or (comp_date and comp_date >= week_ago):
+                date_filtered[tid] = t
+        else:  # "all"
+            date_filtered[tid] = t
+
+    date_labels = {
+        "today": "📅 Hôm nay (Today)",
+        "yesterday": "📅 Hôm qua (Yesterday)",
+        "week": "📅 7 ngày gần đây (Last 7 Days)",
+        "all": "📅 Tất cả thời gian (All Time)"
+    }
+    date_title = date_labels.get(date_filter, "📅 Hôm nay (Today)")
+
+    # 2. Filter by Status
+    filtered_tickets = {}
+    for tid, t in date_filtered.items():
         st = t.get("status")
         if not filter_status or filter_status == "all":
             filtered_tickets[tid] = t
@@ -175,10 +193,26 @@ def build_list_embed(filter_status=None):
         elif filter_status == "cancelled" and st == "cancelled":
             filtered_tickets[tid] = t
 
+    total_in_date = len(date_filtered)
+    in_prog = sum(1 for t in date_filtered.values() if t.get("status") == "in_progress")
+    paused = sum(1 for t in date_filtered.values() if t.get("status") == "on_hold")
+    done = sum(1 for t in date_filtered.values() if t.get("status") == "done")
+    cancelled = sum(1 for t in date_filtered.values() if t.get("status") == "cancelled")
+    not_started = sum(1 for t in date_filtered.values() if t.get("status") == "not_started")
+
+    embed = discord.Embed(
+        title=f"📋 Dashboard — {date_title}",
+        description=(
+            f"**Số lượng ({date_title}):** `{total_in_date}` tickets\n"
+            f"🔵 In Progress: `{in_prog}` | 🟠 Paused: `{paused}` | 🟢 Done: `{done}` | 🔴 Cancelled: `{cancelled}` | 🟡 Not Started: `{not_started}`"
+        ),
+        color=discord.Color.blue()
+    )
+
     if not filtered_tickets:
         embed.add_field(
-            name="Kết quả lọc",
-            value=f"*Không tìm thấy ticket nào với bộ lọc `{filter_status}`.*",
+            name="Danh sách ticket",
+            value=f"*Không có ticket nào phù hợp với mốc `{date_title}` và trạng thái `{filter_status}`.*",
             inline=False
         )
         return embed
@@ -187,12 +221,13 @@ def build_list_embed(filter_status=None):
         pct = progress(t)
         cur_step = get_current_step(t)
         lang = f" `{t['language']}`" if t.get("language") else ""
+        c_str = t["created_at"].strftime("%d/%m") if t.get("created_at") else ""
+        date_badge = f" `[{c_str}]`" if c_str and date_filter in ("week", "all") else ""
         extra_info = ""
 
         if t.get("status") == "on_hold":
             paused_time = t.get("completed_at") or t.get("created_at")
             if paused_time:
-                from datetime import datetime
                 diff = datetime.now() - paused_time
                 days = diff.days
                 hours = int(diff.total_seconds() // 3600) % 24
@@ -204,12 +239,60 @@ def build_list_embed(filter_status=None):
                     extra_info = f"\n⏳ **Đã dừng:** `{hours}h`"
 
         embed.add_field(
-            name=f"🎫 #{tid}{lang}",
+            name=f"🎫 #{tid}{lang}{date_badge}",
             value=f"👉 **Bước hiện tại:** `{cur_step}`\n📊 **Tiến độ:** {progress_bar(pct)} `{pct}%`{extra_info}",
             inline=False
         )
 
     return embed
+
+
+class ListDashboardView(discord.ui.View):
+    def __init__(self, filter_status="all", date_filter="today"):
+        super().__init__(timeout=300)
+        self.filter_status = filter_status
+        self.date_filter = date_filter
+        self.update_buttons()
+
+    def update_buttons(self):
+        for child in self.children:
+            if isinstance(child, discord.ui.Button):
+                if child.custom_id == "btn_today":
+                    child.style = discord.ButtonStyle.primary if self.date_filter == "today" else discord.ButtonStyle.secondary
+                elif child.custom_id == "btn_yesterday":
+                    child.style = discord.ButtonStyle.primary if self.date_filter == "yesterday" else discord.ButtonStyle.secondary
+                elif child.custom_id == "btn_week":
+                    child.style = discord.ButtonStyle.primary if self.date_filter == "week" else discord.ButtonStyle.secondary
+                elif child.custom_id == "btn_all":
+                    child.style = discord.ButtonStyle.primary if self.date_filter == "all" else discord.ButtonStyle.secondary
+
+    @discord.ui.button(label="📅 Hôm nay", style=discord.ButtonStyle.primary, custom_id="btn_today", row=0)
+    async def btn_today(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.date_filter = "today"
+        self.update_buttons()
+        embed = build_list_embed(self.filter_status, self.date_filter)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="📅 Hôm qua", style=discord.ButtonStyle.secondary, custom_id="btn_yesterday", row=0)
+    async def btn_yesterday(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.date_filter = "yesterday"
+        self.update_buttons()
+        embed = build_list_embed(self.filter_status, self.date_filter)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="📅 7 ngày qua", style=discord.ButtonStyle.secondary, custom_id="btn_week", row=0)
+    async def btn_week(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.date_filter = "week"
+        self.update_buttons()
+        embed = build_list_embed(self.filter_status, self.date_filter)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="📅 Tất cả", style=discord.ButtonStyle.secondary, custom_id="btn_all", row=0)
+    async def btn_all(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.date_filter = "all"
+        self.update_buttons()
+        embed = build_list_embed(self.filter_status, self.date_filter)
+        await interaction.response.edit_message(embed=embed, view=self)
 
 
 def build_on_hold_reminder_embed():

@@ -22,6 +22,7 @@ from views import (
     build_embed,
     update_card,
     build_list_embed,
+    ListDashboardView,
     build_on_hold_reminder_embed,
 )
 
@@ -134,14 +135,21 @@ status.autocomplete("ticket")(ticket_autocomplete)
 
 @tree.command(
     name="list",
-    description="Xem danh sách tổng quan các ticket và bước hiện tại"
+    description="Xem danh sách tổng quan các ticket theo ngày và trạng thái"
 )
 @discord.app_commands.describe(
+    date="Chọn mốc thời gian hiển thị",
     filter="Lọc theo trạng thái ticket"
 )
 @discord.app_commands.choices(
+    date=[
+        discord.app_commands.Choice(name="Hôm nay (Today - Mặc định)", value="today"),
+        discord.app_commands.Choice(name="Hôm qua (Yesterday)", value="yesterday"),
+        discord.app_commands.Choice(name="7 ngày gần đây (Last 7 Days)", value="week"),
+        discord.app_commands.Choice(name="Tất cả thời gian (All Time)", value="all"),
+    ],
     filter=[
-        discord.app_commands.Choice(name="Tất cả (All)", value="all"),
+        discord.app_commands.Choice(name="Tất cả trạng thái (All)", value="all"),
         discord.app_commands.Choice(name="Đang xử lý (In Progress)", value="in_progress"),
         discord.app_commands.Choice(name="Tạm dừng (Paused / On Hold)", value="on_hold"),
         discord.app_commands.Choice(name="Đã hoàn thành (Done)", value="done"),
@@ -150,13 +158,19 @@ status.autocomplete("ticket")(ticket_autocomplete)
 )
 async def list_tickets(
     interaction: discord.Interaction,
+    date: discord.app_commands.Choice[str] = None,
     filter: discord.app_commands.Choice[str] = None
 ):
+    date_val = date.value if date else "today"
     filter_val = filter.value if filter else "all"
-    embed = build_list_embed(filter_val)
+
+    embed = build_list_embed(filter_val, date_val)
+    view = ListDashboardView(filter_val, date_val)
+
     await safe_respond(
         interaction,
         embed=embed,
+        view=view,
         ephemeral=True
     )
 
