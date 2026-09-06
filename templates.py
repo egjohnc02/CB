@@ -164,11 +164,31 @@ Thanks,
 Tu Nguyen"""
 
 
+MANDARIN_CANCEL_WAITING_AUTHOR_3DAYS_TEMPLATE = """尊敬的供应商团队，
+您好！
+
+此工单已等待超 3 天时间，因此我们将关闭该工单。
+
+待您补齐所需信息，我方可以继续处理后，请在该工单下留言以重新开启。
+
+祝好，
+Tu Nguyen"""
+
+
 CANCEL_MASTER_NOT_CORE_CLASS_TEMPLATE = """Hello,
 
 The reason this SKU [or these SKUs] could not be moved into Exclusive Brands is because their Master Class is not a Core Class (meaning it is a class Wayfair does not have in our Exclsuive Brands). Some factors as to why some classes are ineligible for White Labeling are that the classes are primarily style agnostic, and are differentiated based on function. Additionally, classes that are more likely to be recognized by brand name (such as appliances) are excluded.
 
 Thank you,
+Tu Nguyen"""
+
+
+MANDARIN_CANCEL_MASTER_NOT_CORE_CLASS_TEMPLATE = """尊敬的供应商团队，
+您好！
+
+该 SKU ___ 无法被移入 Wayfair 独家品牌的原因是，其主类别（Master Class）并非核心类别（Core Class）（即该类别不在 Wayfair 独家品牌的收录范围内）。部分类别无法成为白牌产品主要原因：这类型类别大多无固定款式区分，仅依靠产品功能划分；此外，家电等依靠品牌辨识度区分的类别，同样不在 Wayfair 独家品牌准入范围内。
+
+祝好，
 Tu Nguyen"""
 
 
@@ -242,11 +262,35 @@ Thank you,
 Tu Nguyen"""
 
 
+MANDARIN_ON_HOLD_ENGINEERING_BUG_TEMPLATE = """您好！
+
+感谢您的耐心等待。我们已开始处理此工单，但遇到了{issue_summary}问题，需要技术团队协助解决。在收到技术团队的回复后，我们将及时告知您。在此期间，此工单将设为“暂停处理”状态。
+
+谢谢！
+Tu Nguyen"""
+
+
+MANDARIN_ON_HOLD_STUCK_BATCH_TEMPLATE = """您好！
+
+感谢您的耐心等待。我们已开始处理此工单，但遇到了批量任务处理卡顿 (Stuck Batch) 问题，需要技术团队协助解决。在收到技术团队的回复后，我们将及时告知您。在此期间，此工单将设为“暂停处理”状态。
+
+谢谢！
+Tu Nguyen"""
+
+
 ON_HOLD_TOOL_ERROR_TEMPLATE = """Hello,
 
 Thank you for your patience. We are still waiting for engineering to fix tool-related issues. We will be updating you as soon as information is available.
 
 Thank you,
+Tu Nguyen"""
+
+
+MANDARIN_ON_HOLD_TOOL_ERROR_TEMPLATE = """您好！
+
+感谢您的耐心等待。我们已开始处理此工单，但遇到了内部工具故障，需要技术团队协助解决。获取相关信息后，我们将及时告知您。在此期间，此工单将设为暂停状态。
+
+谢谢！
 Tu Nguyen"""
 
 
@@ -260,6 +304,20 @@ Please let us know how you would like to proceed.
 This ticket will remain open for 3 business days, and if we have not received a response by that time, the ticket will be closed.
 
 Thank you,
+Tu Nguyen"""
+
+
+MANDARIN_ON_HOLD_SPECIFIC_COLLECTION_TEMPLATE = """您好！
+
+当供应商同意加入 Wayfair 独家品牌项目后，供应商就不能自行为 SKU 选择品牌或系列名称。
+
+如您仍需更新系列名称，Wayfair 可从预先批准的名称列表中为您分配名称。
+
+请告知您希望我们如何处理。
+
+我们将保留此工单开启状态 3 个工作日。如届时仍未收到您的回复，将关闭此工单。
+
+谢谢！
 Tu Nguyen"""
 
 
@@ -280,6 +338,14 @@ ON_HOLD_TARGET_COLLECTION_INFO_TEMPLATE = """Hello,
 We see that you are interested in updating an existing collection, but we need additional information to complete your request. Can you please help us identify the target collection by sharing one or more of the SKUs in the collection you wish to update/move SKUs into?
 
 Thank you,
+Tu Nguyen"""
+
+
+MANDARIN_ON_HOLD_TARGET_COLLECTION_INFO_TEMPLATE = """您好！
+
+我们了解您希望更新现有系列，但我们目前仍需您提供更多额外的信息，才能帮助您完成更新。请您提供目标系列中一个或多个 SKU，以协助我们确认您希望更新或移入 SKU 的目标系列是哪一个。
+
+谢谢！
 Tu Nguyen"""
 
 
@@ -304,6 +370,22 @@ Thank you for your patience and understanding.
 Tu Nguyen"""
 
 
+MANDARIN_ON_HOLD_VAULT_FULL_WHITE_LABEL_TEMPLATE = """您好！
+
+感谢您就此白牌请求与我们联系！
+
+经确认，{sku_list} 已被列入优先 SKU 列表。由于此产品展示变更可能对以下方面造成影响，因此需要经过更高级别的内部审批：
+
+排序排名和 PLA
+SKU 品牌
+产品描述
+
+在继续执行您的请求之前，我们会先进行内部审核，以确认是否可以继续推进。请注意，处理时间可能会略有延长。获得批准后，我们将第一时间通过本工单通知您。如您不希望继续推进此请求，请随时告知我们。
+
+感谢您的耐心等待与理解。
+Tu Nguyen"""
+
+
 ON_HOLD_VAULT_PARTIAL_WHITE_LABEL_TEMPLATE = """Hi {name}, 
 Thank you for reaching out with this white label request.  
 
@@ -314,6 +396,20 @@ We wanted to let you know that {sku_list} {is_are} included in one of our priori
 Before moving forward with execution on your request, this request will be internally reviewed to confirm if we can proceed. Please note, this will slightly extend the turnaround time. You will be notified on this ticket if the request is approved. If you no longer want to move forward with this request, please let us know.
 
 Thank you for your patience and understanding.
+Tu Nguyen"""
+
+
+MANDARIN_ON_HOLD_VAULT_PARTIAL_WHITE_LABEL_TEMPLATE = """您好！
+
+感谢您就此白牌请求与我们联系！
+
+经确认，{sku_list} 已被列入优先 SKU 列表。由于此产品展示变更可能对以下方面造成影响，因此需要经过更高级别的内部审批：
+
+SKU 品牌
+
+在继续执行您的请求之前，我们会先进行内部审核，以确认是否可以继续推进。请注意，处理时间可能会略有延长。获得批准后，我们将第一时间通过本工单通知您。如您不希望继续推进此请求，请随时告知我们。
+
+感谢您的耐心等待与理解。
 Tu Nguyen"""
 
 
@@ -330,6 +426,20 @@ Thank you for your patience and understanding.
 Tu Nguyen"""
 
 
+MANDARIN_ON_HOLD_VAULT_COLLECTION_UPDATE_TEMPLATE = """您好！
+
+感谢您就此白牌请求与我们联系！
+
+经确认，{sku_list} 已被列入优先 SKU 列表。由于此产品展示变更可能对以下方面造成影响，因此需要经过更高级别的内部审批：
+
+SKU 系列
+
+在继续执行您的请求之前，我们会先进行内部审核，以确认是否可以继续推进。请注意，处理时间可能会略有延长。获得批准后，我们将第一时间通过本工单通知您。如您不希望继续推进此请求，请随时告知我们。
+
+感谢您的耐心等待与理解。
+Tu Nguyen"""
+
+
 ON_HOLD_VAULT_UN_WHITE_LABEL_TEMPLATE = """Hi {name}, 
 Thank you for reaching out with this un-white label request.  
 
@@ -340,4 +450,18 @@ We wanted to let you know that {sku_list} {is_are} included in one of our priori
 Before moving forward with execution on your request, this request will be internally reviewed to confirm if we can proceed. Please note, this will slightly extend the turnaround time. You will be notified on this ticket if the request is approved. If you no longer want to move forward with this request, please let us know.
 
 Thank you for your patience and understanding. 
+Tu Nguyen"""
+
+
+MANDARIN_ON_HOLD_VAULT_UN_WHITE_LABEL_TEMPLATE = """您好！
+
+感谢您就此取消白牌请求与我们联系！
+
+经确认，{sku_list} 已被列入优先 SKU 列表。由于此产品展示变更可能对以下方面造成影响，因此需要经过更高级别的内部审批：
+
+SKU 品牌
+
+在继续执行您的请求之前，我们会先进行内部审核，以确认是否可以继续推进。请注意，处理时间可能会略有延长。获得批准后，我们将第一时间通过本工单通知您。如您不希望继续推进此请求，请随时告知我们。
+
+感谢您的耐心等待与理解。
 Tu Nguyen"""

@@ -15,7 +15,9 @@ from templates import (
     CANCEL_ALREADY_IN_TARGET_TEMPLATE,
     CANCEL_SF_DISPLAY_BUG_TEMPLATE,
     CANCEL_WAITING_AUTHOR_3DAYS_TEMPLATE,
+    MANDARIN_CANCEL_WAITING_AUTHOR_3DAYS_TEMPLATE,
     CANCEL_MASTER_NOT_CORE_CLASS_TEMPLATE,
+    MANDARIN_CANCEL_MASTER_NOT_CORE_CLASS_TEMPLATE,
     CANCEL_BAD_STATUS_TEMPLATE,
     CANCEL_MULTI_SOURCE_SKU_TEMPLATE,
     ON_HOLD_GENERAL_TEMPLATE,
@@ -23,14 +25,23 @@ from templates import (
     ON_HOLD_IH_SRB_FSB_TEMPLATE,
     ON_HOLD_IH_APPROVAL_TEMPLATE,
     ON_HOLD_ENGINEERING_BUG_TEMPLATE,
+    MANDARIN_ON_HOLD_ENGINEERING_BUG_TEMPLATE,
+    MANDARIN_ON_HOLD_STUCK_BATCH_TEMPLATE,
     ON_HOLD_TOOL_ERROR_TEMPLATE,
+    MANDARIN_ON_HOLD_TOOL_ERROR_TEMPLATE,
     ON_HOLD_SPECIFIC_COLLECTION_TEMPLATE,
+    MANDARIN_ON_HOLD_SPECIFIC_COLLECTION_TEMPLATE,
     ON_HOLD_BRAND_CHANGE_TEMPLATE,
     ON_HOLD_TARGET_COLLECTION_INFO_TEMPLATE,
+    MANDARIN_ON_HOLD_TARGET_COLLECTION_INFO_TEMPLATE,
     ON_HOLD_VAULT_FULL_WHITE_LABEL_TEMPLATE,
+    MANDARIN_ON_HOLD_VAULT_FULL_WHITE_LABEL_TEMPLATE,
     ON_HOLD_VAULT_PARTIAL_WHITE_LABEL_TEMPLATE,
+    MANDARIN_ON_HOLD_VAULT_PARTIAL_WHITE_LABEL_TEMPLATE,
     ON_HOLD_VAULT_COLLECTION_UPDATE_TEMPLATE,
+    MANDARIN_ON_HOLD_VAULT_COLLECTION_UPDATE_TEMPLATE,
     ON_HOLD_VAULT_UN_WHITE_LABEL_TEMPLATE,
+    MANDARIN_ON_HOLD_VAULT_UN_WHITE_LABEL_TEMPLATE,
 )
 
 
@@ -850,11 +861,20 @@ class EngineeringBugModal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction):
         ticket = tickets[self.ticket_id]
         issue = self.issue_summary.value.strip()
+        is_cn = (ticket.get("language") == "CN")
         ticket["ticket_type"] = "on_hold"
         ticket["status"] = "on_hold"
         ticket["done_comment_type"] = f"On Hold - Engineering Bug ({issue})"
 
-        text = ON_HOLD_ENGINEERING_BUG_TEMPLATE.format(issue_summary=issue)
+        if is_cn:
+            if "stuck" in issue.lower() or "batch" in issue.lower():
+                text = MANDARIN_ON_HOLD_STUCK_BATCH_TEMPLATE
+            elif "tool" in issue.lower() or "lỗi" in issue.lower() or "error" in issue.lower() or "bug" in issue.lower():
+                text = MANDARIN_ON_HOLD_TOOL_ERROR_TEMPLATE
+            else:
+                text = MANDARIN_ON_HOLD_ENGINEERING_BUG_TEMPLATE.format(issue_summary=issue)
+        else:
+            text = ON_HOLD_ENGINEERING_BUG_TEMPLATE.format(issue_summary=issue)
 
         await interaction.response.send_message(
             content=f"📋 **On Hold - Engineering Bug — #{self.ticket_id}**\n\n```text\n{text}\n```",
@@ -892,22 +912,36 @@ class VaultOnHoldModal(discord.ui.Modal):
         ticket = tickets[self.ticket_id]
         name = self.recipient_name.value.strip() or "Supplier Team"
         skus = self.sku_list.value.strip()
+        is_cn = (ticket.get("language") == "CN")
 
         is_are = "are" if ("," in skus or "\n" in skus or ";" in skus or " " in skus.strip()) else "is"
 
-        templates_map = {
-            "full_white_label": ON_HOLD_VAULT_FULL_WHITE_LABEL_TEMPLATE,
-            "partial_white_label": ON_HOLD_VAULT_PARTIAL_WHITE_LABEL_TEMPLATE,
-            "collection_update": ON_HOLD_VAULT_COLLECTION_UPDATE_TEMPLATE,
-            "un_white_label": ON_HOLD_VAULT_UN_WHITE_LABEL_TEMPLATE,
-        }
-
-        template_str = templates_map.get(self.vault_key, ON_HOLD_VAULT_FULL_WHITE_LABEL_TEMPLATE)
-        text = template_str.format(
-            name=name,
-            sku_list=skus,
-            is_are=is_are
-        )
+        if is_cn:
+            templates_map = {
+                "full_white_label": MANDARIN_ON_HOLD_VAULT_FULL_WHITE_LABEL_TEMPLATE,
+                "partial_white_label": MANDARIN_ON_HOLD_VAULT_PARTIAL_WHITE_LABEL_TEMPLATE,
+                "collection_update": MANDARIN_ON_HOLD_VAULT_COLLECTION_UPDATE_TEMPLATE,
+                "un_white_label": MANDARIN_ON_HOLD_VAULT_UN_WHITE_LABEL_TEMPLATE,
+            }
+            template_str = templates_map.get(self.vault_key, MANDARIN_ON_HOLD_VAULT_FULL_WHITE_LABEL_TEMPLATE)
+            text = template_str.format(
+                name=name,
+                sku_list=skus,
+                is_are=is_are
+            ) if "{name}" in template_str else template_str.format(sku_list=skus)
+        else:
+            templates_map = {
+                "full_white_label": ON_HOLD_VAULT_FULL_WHITE_LABEL_TEMPLATE,
+                "partial_white_label": ON_HOLD_VAULT_PARTIAL_WHITE_LABEL_TEMPLATE,
+                "collection_update": ON_HOLD_VAULT_COLLECTION_UPDATE_TEMPLATE,
+                "un_white_label": ON_HOLD_VAULT_UN_WHITE_LABEL_TEMPLATE,
+            }
+            template_str = templates_map.get(self.vault_key, ON_HOLD_VAULT_FULL_WHITE_LABEL_TEMPLATE)
+            text = template_str.format(
+                name=name,
+                sku_list=skus,
+                is_are=is_are
+            )
 
         ticket["ticket_type"] = "on_hold"
         ticket["status"] = "on_hold"
@@ -1170,6 +1204,7 @@ class CancelSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         ticket = tickets[self.ticket_id]
         val = self.values[0]
+        is_cn = (ticket.get("language") == "CN")
 
         if val == "reroute":
             await interaction.response.send_modal(RerouteModal(self.ticket_id))
@@ -1193,8 +1228,14 @@ class CancelSelect(discord.ui.Select):
         templates_map = {
             "onsite": ("Cancel - VĐ Onsite", CANCEL_ONSITE_TEMPLATE),
             "sf_display_bug": ("Cancel - SF Display Bug", CANCEL_SF_DISPLAY_BUG_TEMPLATE),
-            "waiting_author_3days": ("Cancel - Waiting for Author (3 Days)", CANCEL_WAITING_AUTHOR_3DAYS_TEMPLATE),
-            "master_not_core": ("Cancel - Master Class not Core Class", CANCEL_MASTER_NOT_CORE_CLASS_TEMPLATE),
+            "waiting_author_3days": (
+                "Cancel - Waiting for Author (3 Days)",
+                MANDARIN_CANCEL_WAITING_AUTHOR_3DAYS_TEMPLATE if is_cn else CANCEL_WAITING_AUTHOR_3DAYS_TEMPLATE
+            ),
+            "master_not_core": (
+                "Cancel - Master Class not Core Class",
+                MANDARIN_CANCEL_MASTER_NOT_CORE_CLASS_TEMPLATE if is_cn else CANCEL_MASTER_NOT_CORE_CLASS_TEMPLATE
+            ),
             "bad_status": ("Cancel - Bad Status (Not live)", CANCEL_BAD_STATUS_TEMPLATE),
         }
 
@@ -1331,6 +1372,7 @@ class OnHoldSelect(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         ticket = tickets[self.ticket_id]
         val = self.values[0]
+        is_cn = (ticket.get("language") == "CN")
 
         # Vault Modals
         if val == "vault_full_white_label":
@@ -1371,10 +1413,19 @@ class OnHoldSelect(discord.ui.Select):
             "general": ("On Hold - Xin list SKU", ON_HOLD_GENERAL_TEMPLATE),
             "ih_srb_fsb": ("On Hold - IH Approval (SRB/FSB)", ON_HOLD_IH_SRB_FSB_TEMPLATE),
             "ih_approval": ("On Hold - IH Approval Needed", ON_HOLD_IH_APPROVAL_TEMPLATE),
-            "tool_error": ("On Hold - Tool Error", ON_HOLD_TOOL_ERROR_TEMPLATE),
-            "collection_name": ("On Hold - Specific Collection Name", ON_HOLD_SPECIFIC_COLLECTION_TEMPLATE),
+            "tool_error": (
+                "On Hold - Tool Error",
+                MANDARIN_ON_HOLD_TOOL_ERROR_TEMPLATE if is_cn else ON_HOLD_TOOL_ERROR_TEMPLATE
+            ),
+            "collection_name": (
+                "On Hold - Specific Collection Name",
+                MANDARIN_ON_HOLD_SPECIFIC_COLLECTION_TEMPLATE if is_cn else ON_HOLD_SPECIFIC_COLLECTION_TEMPLATE
+            ),
             "brand_change": ("On Hold - Brand Change", ON_HOLD_BRAND_CHANGE_TEMPLATE),
-            "target_collection": ("On Hold - Target Collection Info", ON_HOLD_TARGET_COLLECTION_INFO_TEMPLATE),
+            "target_collection": (
+                "On Hold - Target Collection Info",
+                MANDARIN_ON_HOLD_TARGET_COLLECTION_INFO_TEMPLATE if is_cn else ON_HOLD_TARGET_COLLECTION_INFO_TEMPLATE
+            ),
         }
 
         type_name, template_text = templates_map[val]
