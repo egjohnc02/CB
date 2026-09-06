@@ -249,6 +249,12 @@ def build_list_embed(filter_status="all", date_filter="today"):
                 else:
                     extra_info = f"\n⏳ **Đã dừng:** `{hours}h`"
 
+        if t.get("notes"):
+            notes_preview = " | ".join(t["notes"])
+            if len(notes_preview) > 60:
+                notes_preview = notes_preview[:57] + "..."
+            extra_info += f"\n🚨 **Lưu ý/Cảnh báo:** `{notes_preview}`"
+
         embed.add_field(
             name=f"🎫 #{tid}{lang}{date_badge}",
             value=f"👉 **Bước hiện tại:** `{cur_step}`\n📊 **Tiến độ:** {progress_bar(pct)} `{pct}%`{extra_info}",
@@ -497,10 +503,10 @@ def build_embed(ticket_id):
         )
 
     if ticket.get("notes"):
-        notes_text = "\n".join(f"• {note}" for note in ticket["notes"])
+        diff_lines = "\n".join(f"- ⚠️ {note}" for note in ticket["notes"])
         embed.add_field(
-            name="📝 Notes",
-            value=notes_text[:1024],
+            name="🚨 ⚠️ CẢNH BÁO / LƯU Ý ĐẶC BIỆT",
+            value=f"```diff\n{diff_lines[:1000]}\n```",
             inline=False
         )
 

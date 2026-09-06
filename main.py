@@ -300,7 +300,10 @@ async def note(
 
     await safe_respond(
         interaction,
-        content=f"📝 Added note to **Ticket #{ticket_id}**:\n> {text}",
+        content=(
+            f"🚨 **Đã thêm Cảnh báo/Ghi chú cho Ticket #{ticket_id}:**\n"
+            f"```diff\n- ⚠️ {text}\n```"
+        ),
         ephemeral=True
     )
 
